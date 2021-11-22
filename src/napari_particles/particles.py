@@ -1,19 +1,17 @@
 """
-A billboarded mesh layer with texture support
+A billboarded particle layer with texture/shader support
 
-Consists of 
-
-Billboards layer class
-and 
 
 todo:
 
 - intensity modulation / cmap 
+- z depth mapping for sphere particle
 
 """
 
 import numpy as np 
 from abc import ABC
+from collections.abc import Iterable
 from napari.layers import Surface
 from napari.layers.utils.layer_utils import calc_data_range
 from vispy.visuals.filters import Filter
@@ -21,13 +19,16 @@ from vispy.visuals.shaders import Function, Varying
 from vispy.gloo import Texture2D, VertexBuffer
 
 from .utils import generate_billboards_2d
-
+from .filters import ShaderFilter
 
 class BillboardsFilter(Filter):
     """ Billboard geometry filter (transforms vertices to always face camera) 
     """
     def __init__(self):
         vfunc = Function("""
+
+        varying float v_z_center;
+
         void apply(){
             
             // eye coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
@@ -49,14 +50,15 @@ class BillboardsFilter(Filter):
 
             vec3 pos_real  = $vertex_center.xyz + camera_right*pos.x + camera_up*pos.y;
             gl_Position = $transform(vec4(pos_real, 1.0));
-            
+
             $v_texcoords = tex;
             }
         """)
 
         ffunc = Function("""
+
         void apply() {   
-            $texcoords;         
+            $texcoords;
         }
         """)
 
@@ -90,10 +92,8 @@ class BillboardsFilter(Filter):
         self._update_coords_buffer(centercoords)
 
     def _update_coords_buffer(self, centercoords):
-        if not self._attached or self._visual is None:
-            return
-        print('setting coords', centercoords.shape)
-        self._centercoords_buffer.set_data(centercoords[:,::-1], convert=True)
+        if self._attached and self._visual is not None:
+            self._centercoords_buffer.set_data(centercoords[:,::-1], convert=True)
 
     @property
     def texcoords(self):
@@ -106,10 +106,8 @@ class BillboardsFilter(Filter):
         self._update_texcoords_buffer(texcoords)
 
     def _update_texcoords_buffer(self, texcoords):
-        if not self._attached or self._visual is None:
-            return
-        print('setting texture coords', texcoords.shape)
-        self._texcoords_buffer.set_data(texcoords[:,::-1], convert=True)
+        if self._attached or self._visual is not None:
+            self._texcoords_buffer.set_data(texcoords[:,::-1], convert=True)
 
     def _attach(self, visual):
         tr = visual.transforms.get_transform()
@@ -120,11 +118,11 @@ class BillboardsFilter(Filter):
         super()._attach(visual)
         
 
-class Billboards(Surface):
-    """ Billboards Layer that renders camera facing quads of given size
+class Particles(Surface):
+    """ Billboarded particle layer that renders camera facing quads of given size
         Can be combined with other (e.g. texture) filter to create particle systems etc 
     """
-    def __init__(self, coords, size=10, values=1, filters=None, **kwargs):
+    def __init__(self, coords, size=10, values=1, filter=ShaderFilter('gaussian'), **kwargs):
 
         kwargs.setdefault('shading', 'none')
         kwargs.setdefault('blending', 'additive')
@@ -152,7 +150,7 @@ class Billboards(Surface):
         self._size = size
         self._texcoords = texcoords 
         self._billboard_filter = BillboardsFilter()
-        self._other_filters = filters if filters is not None else ()
+        self.filter = filter
         super().__init__((vertices, faces, values), **kwargs)
 
     def _set_view_slice(self):
@@ -161,11 +159,21 @@ class Billboards(Surface):
         self._update_billboard_filter()
 
     def _update_billboard_filter(self):
-        if self._billboard_filter._attached:
-            faces = self._view_faces.flatten()
-            self._billboard_filter.texcoords    = self._texcoords[faces]
-            self._billboard_filter.centercoords = self._centercoords[faces][:,-3:]
+        faces = self._view_faces.flatten()
+        if self._billboard_filter._attached and len(faces)>0:
+                self._billboard_filter.texcoords    = self._texcoords[faces]
+                self._billboard_filter.centercoords = self._centercoords[faces][:,-3:]
 
+    @property
+    def filter(self):
+        """The filter property."""
+        return self._filter
+
+    @filter.setter
+    def filter(self, value):
+        if not isinstance(value, Iterable):
+            value = (value,)
+        self._filter = tuple(value)
 
     @property
     def _extent_data(self) -> np.ndarray:
@@ -190,14 +198,10 @@ class Billboards(Surface):
     def add_to_viewer(self, viewer):
         viewer.add_layer(self)
         visual = self.get_visual(viewer)
+        
         visual.attach(self._billboard_filter)
         self._update_billboard_filter()
 
-        for f in self._other_filters:
+        for f in self.filter:
             visual.attach(f)
         
-
-
-
-if __name__ == "__main__":
-    layer = Billboards()

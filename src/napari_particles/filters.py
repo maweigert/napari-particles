@@ -47,7 +47,49 @@ _shader_functions = {
                 return val;
             }
             """,
-    'bubbles': """
+    'particle': """
+            float func(vec2 x){
+                float r = length(x);
+                float val = .05/((max(r,.01)-0.01)+0.05);
+                return val;
+            }
+            """,
+
+    'airy': """
+            float func(vec2 x){
+                float r = 8*length(x);
+                float val = abs(sin(r)/(1e-8+r));
+                return val;
+            }
+            """,
+
+    'fresnel': """
+            float func(vec2 x){
+                float r = length(x);
+                float d = .7;
+                float val = 1.;
+                if (r>d){
+                    val = exp(-4*(r-d));
+                    val *= cos(1000*(r-d)*(r-d));
+
+                }
+                return val;
+            }
+            """,
+    
+    'sphere': """        
+            float func(vec2 x){
+
+                float r = length(x);
+                float r0 = .8;
+                if (r<r0)
+                    return sqrt(r0*r0-r*r);
+                else
+                    discard;
+            }
+            """,
+
+    'bubble': """
             float func(vec2 x){
                 float r = length(x);
                 float r1 = .8;
@@ -57,10 +99,10 @@ _shader_functions = {
                 if (r<r2)
                     return sqrt(r2*r2-r*r)/sqrt(r2*r2-r1*r1);
                 else
-                    return 0;
+                    discard;
             }
             """,
-    'bubbles2': """
+    'bubble2': """
             float func(vec2 x){
                 float r = length(x);
                 float r0 = .9;
@@ -74,16 +116,22 @@ _shader_functions = {
 }
 
 class ShaderFilter(Filter):
-    def __init__(self, mode='gaussian', **kwargs):        
+    def __init__(self, mode='gaussian', distance_intensity_increase=1, **kwargs):        
         kwargs.setdefault('fhook', 'post')
 
         fcode = Function("""
         void apply() {
             float val = $func(2*(v_texcoord-.5));
-            gl_FragColor *= val;
+
+            // if particle is far away, ramp up intensity
+            float infinity_raise = $distance_intensity_increase*length(fwidth(v_texcoord));
+            
+            gl_FragColor *= val*(1+infinity_raise);
         }""")
+
         if mode in _shader_functions: 
             fcode['func']=Function(_shader_functions[mode])
+            fcode['distance_intensity_increase'] = 20*distance_intensity_increase
         else:
             fcode=mode
 
