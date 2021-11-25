@@ -24,40 +24,76 @@ from .filters import ShaderFilter
 class BillboardsFilter(Filter):
     """ Billboard geometry filter (transforms vertices to always face camera) 
     """
-    def __init__(self):
+    def __init__(self, antialias=0):
         vfunc = Function("""
 
         varying float v_z_center;
+        varying float v_scale_intensity;
 
         void apply(){
             
-            // eye coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
+            // original world coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
             vec4 pos = $transform_inv(gl_Position);
             vec2 tex = $texcoords;
 
             //$camera(pos);
+
+            // get first and second column of view (which is the inverse of the camera) 
             vec3 camera_right = $camera_inv(vec4(1,0,0,0)).xyz;
             vec3 camera_up    = $camera_inv(vec4(0,1,0,0)).xyz;
 
+
             // when particles become too small, lock texture size and apply antialiasing (only used when antialias=1)
             // decrease this value to increase antialiasing
-            float len_cutoff = .1 * max(abs(pos.x), abs(pos.y)) ;                     
+            //float dist_cutoff = .2 * max(abs(pos.x), abs(pos.y));
+
+            // increase this value to increase antialiasing
+            float dist_cutoff = $antialias;                                          
             
             float len = length(camera_right);
 
             camera_right = normalize(camera_right);
-            camera_up    = normalize(camera_up);
+            camera_up    = normalize(camera_up);                      
+
+            vec4 p1 = $transform(vec4($vertex_center.xyz + camera_right*pos.x + camera_up*pos.y, 1.));
+            vec4 p2 = $transform(vec4($vertex_center,1));
+            float dist = length(p1.xy/p1.w-p2.xy/p2.w); 
+
+
+            // if antialias and far away zoomed out, keep sprite size constant and shrink texture...
+            // else adjust sprite size 
+            if (($antialias>0) && (dist<dist_cutoff)) {
+                
+                float scale = dist_cutoff/dist;
+                //tex = .5+(tex-.5)*clamp(scale,1,10);
+                
+                tex = .5+(tex-.5);
+                camera_right = camera_right*scale;
+                camera_up    = camera_up*scale;
+                v_scale_intensity = scale;
+                
+            }
 
             vec3 pos_real  = $vertex_center.xyz + camera_right*pos.x + camera_up*pos.y;
-            gl_Position = $transform(vec4(pos_real, 1.0));
 
+            gl_Position = $transform(vec4(pos_real, 1.));
+            
+            vec4 center = $transform(vec4($vertex_center,1));
+            v_z_center = center.z/center.w;
+            
             $v_texcoords = tex;
+
+
             }
         """)
 
         ffunc = Function("""
-
+        varying float v_scale_intensity;
+        varying float v_z_center;
+        
         void apply() {   
+            gl_FragDepth = v_z_center;
+
             $texcoords;
         }
         """)
@@ -70,6 +106,7 @@ class BillboardsFilter(Filter):
             np.zeros((0, 2), dtype=np.float32)
         )
         vfunc['texcoords'] = self._texcoords_buffer
+        vfunc['antialias'] = float(antialias)
 
         
         self._centercoords_buffer = VertexBuffer(
@@ -110,10 +147,15 @@ class BillboardsFilter(Filter):
             self._texcoords_buffer.set_data(texcoords[:,::-1], convert=True)
 
     def _attach(self, visual):
-        tr = visual.transforms.get_transform()
-        self.vshader['transform'] = tr
-        self.vshader['transform_inv'] = tr.inverse
+
+        # the full projection model view
+        self.vshader['transform'] = visual.transforms.get_transform('visual', 'render')
+        # the inverse of it
+        self.vshader['transform_inv'] = visual.transforms.get_transform('render', 'visual')
+
+        # the modelview
         self.vshader['camera_inv'] = visual.transforms.get_transform('document', 'scene')
+        # inverse of it
         self.vshader['camera'] = visual.transforms.get_transform('scene', 'document')
         super()._attach(visual)
         
@@ -122,7 +164,7 @@ class Particles(Surface):
     """ Billboarded particle layer that renders camera facing quads of given size
         Can be combined with other (e.g. texture) filter to create particle systems etc 
     """
-    def __init__(self, coords, size=10, values=1, filter=ShaderFilter('gaussian'), **kwargs):
+    def __init__(self, coords, size=10, values=1, filter=ShaderFilter('gaussian'), antialias=False, **kwargs):
 
         kwargs.setdefault('shading', 'none')
         kwargs.setdefault('blending', 'additive')
@@ -149,7 +191,7 @@ class Particles(Surface):
         self._centercoords = centercoords
         self._size = size
         self._texcoords = texcoords 
-        self._billboard_filter = BillboardsFilter()
+        self._billboard_filter = BillboardsFilter(antialias=antialias)
         self.filter = filter
         super().__init__((vertices, faces, values), **kwargs)
 
@@ -171,7 +213,9 @@ class Particles(Surface):
 
     @filter.setter
     def filter(self, value):
-        if not isinstance(value, Iterable):
+        if value is None:
+            value = ()
+        elif not isinstance(value, Iterable):
             value = (value,)
         self._filter = tuple(value)
 
