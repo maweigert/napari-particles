@@ -34,6 +34,9 @@ class BillboardsFilter(Filter):
             
             // original world coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
             vec4 pos = $transform_inv(gl_Position);
+
+            pos.z *= pos.w; 
+
             vec2 tex = $texcoords;
 
             //$camera(pos);
@@ -41,7 +44,6 @@ class BillboardsFilter(Filter):
             // get first and second column of view (which is the inverse of the camera) 
             vec3 camera_right = $camera_inv(vec4(1,0,0,0)).xyz;
             vec3 camera_up    = $camera_inv(vec4(0,1,0,0)).xyz;
-
 
             // when particles become too small, lock texture size and apply antialiasing (only used when antialias=1)
             // decrease this value to increase antialiasing
@@ -52,14 +54,17 @@ class BillboardsFilter(Filter):
             
             float len = length(camera_right);
 
-            camera_right = normalize(camera_right);
-            camera_up    = normalize(camera_up);                      
+            //camera_right = normalize(camera_right);
+            //camera_up    = normalize(camera_up);
+
+            camera_right = camera_right/len;
+            camera_up    = camera_up/len;                      
 
             vec4 p1 = $transform(vec4($vertex_center.xyz + camera_right*pos.x + camera_up*pos.y, 1.));
             vec4 p2 = $transform(vec4($vertex_center,1));
             float dist = length(p1.xy/p1.w-p2.xy/p2.w); 
 
-
+            
             // if antialias and far away zoomed out, keep sprite size constant and shrink texture...
             // else adjust sprite size 
             if (($antialias>0) && (dist<dist_cutoff)) {
@@ -71,12 +76,18 @@ class BillboardsFilter(Filter):
                 camera_right = camera_right*scale;
                 camera_up    = camera_up*scale;
                 v_scale_intensity = scale;
+
+
                 
             }
 
             vec3 pos_real  = $vertex_center.xyz + camera_right*pos.x + camera_up*pos.y;
 
+            //pos_real  = $vertex_center.xyz + $camera_inv(vec4(1,0,0,0))*pos.x + $camera_inv(vec4(0,1,0,0))*pos.y;
+
             gl_Position = $transform(vec4(pos_real, 1.));
+            
+            
             
             vec4 center = $transform(vec4($vertex_center,1));
             v_z_center = center.z/center.w;

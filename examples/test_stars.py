@@ -8,10 +8,19 @@ from napari_particles.filters import ShaderFilter
 import pandas as pd
 from csbdeep.utils import normalize
 
+
+def norm_clip(x, pmin=0.1, pmax=99.9):
+    bounds = np.max(np.abs(np.percentile(x, (pmin, pmax), axis=0)),0) 
+    bounds = np.stack([-bounds, bounds])
+    x = np.clip(x, *bounds)
+    x = x/np.max(bounds)
+    return x 
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i','--input', type=str, default='data/galaxy_200kparticles.dat')
-    parser.add_argument('--size', type=float, default=.015)
+    parser.add_argument('--size', type=float, default=.005)
     parser.add_argument('--sub',  type=int, default=1)
     parser.add_argument('-s','--shader',  type=str, default='particle')
     parser.add_argument('-a','--antialias',  type=float, default=0.05)
@@ -31,15 +40,27 @@ if __name__ == "__main__":
             print(e)
             continue
     
+    df = df.dropna()
+
+    df = df.iloc[::args.sub]
+
     coords = df[["x","y","z"]].to_numpy()
+
+    coords = coords - np.median(coords,axis=0)
+
     
-    diam = df['r'].to_numpy() 
-    if diam.max()>diam.min():
-        diam = normalize(diam, clip=True)
+    coords = norm_clip(coords)
+    
+    
 
-    size   = args.size*diam
-    values = diam 
 
+    rad = np.maximum(0,df['r'].to_numpy())
+    rad /= np.max(np.abs(np.percentile(rad, (.01,99.99), axis=0)),0, keepdims=True)
+
+    size   = args.size
+    values = rad
+
+    
     layer = Particles(coords, 
         size=size, 
         values=values,
@@ -56,7 +77,7 @@ if __name__ == "__main__":
 
 
     v.dims.ndisplay=3
-    v.camera.perspective=40.0
+    v.camera.perspective=80.0
     v.camera.angles=(90,0, 0)
 
     napari.run()

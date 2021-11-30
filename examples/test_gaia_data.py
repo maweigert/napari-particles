@@ -75,7 +75,6 @@ if __name__ == "__main__":
 
     coords = coords - np.median(coords,axis=0)
 
-    
     coords /= np.max(np.abs(np.percentile(coords, (.1,99.9), axis=0)),0, keepdims=True)
     coords = np.clip(coords,-1,1)
 

@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('-s','--shader',  type=str, default='gaussian')
     parser.add_argument('-d','--dim',  type=int, choices=[2,3], default=3)
     parser.add_argument('-v', '--values', type=float, default=None)
-    parser.add_argument('-a', '--antialias', type=int, default=1)
+    parser.add_argument('-a', '--antialias', type=float, default=1)
     args = parser.parse_args() 
 
     np.random.seed(32)
