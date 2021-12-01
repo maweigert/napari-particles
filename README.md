@@ -14,10 +14,36 @@ git clone git@github.com:maweigert/napari-particles.git
 pip install napari-particles/
 ```
 
+## Usage
 
-## Examples
 
-### Basic
+```
+import numpy as np
+import napari
+from napari_particles.particles import Particles
+from napari_particles.filters import ShaderFilter
+
+coords = np.random.randint(0,100,(1000,3))
+size   = np.random.uniform(3, 9, len(coords))
+values = np.random.uniform(0.2,1, len(coords))
+
+layer = Particles(coords, 
+                size=size, 
+                values=values,
+                colormap='Spectral',
+                filter = ShaderFilter('gaussian'))
+
+layer.contrast_limits=(0,1)
+v = napari.Viewer()
+layer.add_to_viewer(v)
+v.dims.ndisplay=3
+
+napari.run()
+```
+
+## Examples Scripts
+
+### Basic 
 
 ```
 cd examples
