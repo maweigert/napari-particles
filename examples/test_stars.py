@@ -6,7 +6,6 @@ import napari
 from napari_particles.particles import Particles
 from napari_particles.filters import ShaderFilter
 import pandas as pd
-from csbdeep.utils import normalize
 
 
 def norm_clip(x, pmin=0.1, pmax=99.9):
@@ -19,11 +18,12 @@ def norm_clip(x, pmin=0.1, pmax=99.9):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i','--input', type=str, default='data/galaxy_200kparticles.dat')
+    parser.add_argument('-i','--input', type=str, default='data/stars/galaxy_200kparticles.dat')
     parser.add_argument('--size', type=float, default=.005)
     parser.add_argument('--sub',  type=int, default=1)
     parser.add_argument('-s','--shader',  type=str, default='particle')
     parser.add_argument('-a','--antialias',  type=float, default=0.05)
+    parser.add_argument('--points', action='store_true')
     args = parser.parse_args() 
 
     np.random.seed(32)
@@ -31,8 +31,7 @@ if __name__ == "__main__":
     
     for sep in (',', " ", "\t"):
         try:
-            print(sep)
-            df = pd.read_csv(args.input, delimiter=sep)
+            df = pd.read_csv(args.input, delimiter=sep, comment='#')
             df = df[df.columns[:4]]
             df.columns=["x","y","z","r"]
             break
@@ -41,18 +40,22 @@ if __name__ == "__main__":
             continue
     
     df = df.dropna()
+    # df = df[df.x.abs()<1e10]
+    # df = df[df.y.abs()<1e10]
+    # df = df[df.z.abs()<1e10]
 
     df = df.iloc[::args.sub]
 
+
     coords = df[["x","y","z"]].to_numpy()
+
+    print(f'rendering {len(coords)} objects')
 
     coords = coords - np.median(coords,axis=0)
 
     
     coords = norm_clip(coords)
     
-    
-
 
     rad = np.maximum(0,df['r'].to_numpy())
     rad /= np.max(np.abs(np.percentile(rad, (.01,99.99), axis=0)),0, keepdims=True)
@@ -60,20 +63,24 @@ if __name__ == "__main__":
     size   = args.size
     values = rad
 
-    
-    layer = Particles(coords, 
-        size=size, 
-        values=values,
-        colormap='Spectral',
-        filter = ShaderFilter(args.shader, distance_intensity_increase=args.antialias) if args.shader !="" else None, 
-        antialias=args.antialias,
-    )
-
     v = napari.Viewer()
 
-    layer.contrast_limits=(0,1)
+    if args.points:
+        v.add_points(coords, size=size)
+        v.layers[-1].blending='additive'
+    else:
+        layer = Particles(coords, 
+            size=size, 
+            values=values,
+            colormap='Spectral',
+            filter = ShaderFilter(args.shader, distance_intensity_increase=args.antialias) if args.shader !="" else None, 
+            antialias=args.antialias,
+        )
 
-    layer.add_to_viewer(v)
+
+        layer.contrast_limits=(0,1)
+
+        layer.add_to_viewer(v)
 
 
     v.dims.ndisplay=3

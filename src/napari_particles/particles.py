@@ -1,12 +1,6 @@
 """
 A billboarded particle layer with texture/shader support
 
-
-todo:
-
-- intensity modulation / cmap 
-- z depth mapping for sphere particle
-
 """
 
 import numpy as np 
@@ -38,6 +32,21 @@ class BillboardsFilter(Filter):
             pos.z *= pos.w; 
 
             vec2 tex = $texcoords;
+
+            mat4 scale = mat4(1.0);
+            scale[0][0] = 1;
+            scale[1][1] = 1;
+            scale[2][2] = 1;
+            vec4 ex = vec4(1,0,0,0);
+            vec4 ey = vec4(0,1,0,0);
+
+            //vec2 ex2 = $camera_inv(scale*$camera(ex)).xy;
+            //vec2 ey2 = $camera_inv(scale*$camera(ey)).xy;
+
+            vec2 ex2 = $camera(scale*$camera_inv(ex)).xy;
+            vec2 ey2 = $camera(scale*$camera_inv(ey)).xy;
+
+            mat2 Mscale = mat2(ex2, ey2);
 
             //$camera(pos);
 
@@ -87,11 +96,12 @@ class BillboardsFilter(Filter):
 
             gl_Position = $transform(vec4(pos_real, 1.));
             
-            
-            
             vec4 center = $transform(vec4($vertex_center,1));
             v_z_center = center.z/center.w;
             
+
+            tex = Mscale*(tex-.5) +.5;
+
             $v_texcoords = tex;
 
 
@@ -194,7 +204,6 @@ class Particles(Surface):
             coords = np.concatenate([np.zeros((len(coords),1)), coords], axis=-1)
 
         vertices, faces, texcoords = generate_billboards_2d(coords, size=size)        
-        
         # repeat values for each 4 vertices
         centercoords = np.repeat(coords, 4, axis=0)
         values = np.repeat(values, 4, axis=0)

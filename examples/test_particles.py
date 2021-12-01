@@ -13,20 +13,24 @@ if __name__ == "__main__":
     parser.add_argument('-s','--shader',  type=str, default='gaussian')
     parser.add_argument('-d','--dim',  type=int, choices=[2,3], default=3)
     parser.add_argument('-v', '--values', type=float, default=None)
-    parser.add_argument('-a', '--antialias', type=float, default=1)
+    parser.add_argument('-a', '--antialias', type=float, default=0)
+    parser.add_argument('--persp', action='store_true')
+    parser.add_argument('--vol', action='store_true')
+
     args = parser.parse_args() 
 
     np.random.seed(32)
 
-    coords = np.random.uniform(-10,10,(args.n,args.dim))
+    coords = np.random.uniform(0,50,(args.n,args.dim))
+
     if args.dim==3:
         coords[:,0] *= .1
     
     size = np.random.uniform(0.2,1,len(coords))
     size *= args.size*np.prod(coords.max(axis=0)-coords.min(axis=0))**(1/3)/np.mean(size)/len(size)**(1/3)
-    size = args.size
+
     if args.values is None:
-        args.values = np.random.uniform(0.2,1,len(coords))
+        args.values = np.random.uniform(0.8,1,len(coords))
     
 
     layer = Particles(coords, size=size, 
@@ -37,6 +41,11 @@ if __name__ == "__main__":
     )
 
     v = napari.Viewer()
+
+    if args.vol:
+        vol = np.einsum('i,jk', np.ones(20), np.random.randint(0,50,(50,50))==0)
+        _im = v.add_image(vol)
+        _im.opacity=.3
 
     layer.contrast_limits=(0,1)
 
@@ -49,12 +58,15 @@ if __name__ == "__main__":
     visual = layer.get_visual(v)
 
 
-    v.camera.center=(3.4714992221962504e-06, 0.004604752451216498, 0.01231765490030412)
-    v.camera.zoom=34.11731650145296
-    v.camera.angles=(-14.376917598220158, 33.506835538300216, 141.30481201506916)
-    v.camera.perspective=40.0
-    layer.blending='additive'
-    cam = visual.transforms.get_transform('scene', 'document')
-    cam_inv = visual.transforms.get_transform('document', 'scene')
+    # v.camera.center=(3.4714992221962504e-06, 0.004604752451216498, 0.01231765490030412)
+    # v.camera.zoom=34.11731650145296
+    # v.camera.angles=(-14.376917598220158, 33.506835538300216, 141.30481201506916)
+    # v.camera.perspective=40.0
+    # layer.blending='additive'
+    # cam = visual.transforms.get_transform('scene', 'document')
+    # cam_inv = visual.transforms.get_transform('document', 'scene')
+
+    if args.persp:
+        v.camera.perspective=50
 
     napari.run()
