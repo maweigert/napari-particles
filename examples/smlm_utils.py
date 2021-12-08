@@ -57,12 +57,13 @@ def coords_from_csv(fname, delimiter=None):
         intens = intens/np.percentile(intens[::8],90)
     except KeyError:
         intens = 1/size
-
     
     intens = intens/np.percentile(intens[::8],90)
-    
+
 
     return (coords, size, intens), df
+
+
 
 
 def human_format(val : int, fmt = '.1f') -> str :

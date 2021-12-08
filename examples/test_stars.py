@@ -18,7 +18,8 @@ def norm_clip(x, pmin=0.1, pmax=99.9):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i','--input', type=str, default='data/stars/galaxy_200kparticles.dat')
+    #parser.add_argument('-i','--input', type=str, default='data/stars/galaxy_200kparticles.dat')
+    parser.add_argument('-i','--input', type=str, default='data/stars/gaiasky_basedata.csv')
     parser.add_argument('--size', type=float, default=.005)
     parser.add_argument('--sub',  type=int, default=1)
     parser.add_argument('-s','--shader',  type=str, default='particle')

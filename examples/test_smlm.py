@@ -10,8 +10,8 @@ from napari_particles.filters import ShaderFilter, TextureFilter
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser() 
-    parser.add_argument('-i', '--input', type=str, default=None) 
-    parser.add_argument('-d', '--data', type=str, default='simple', 
+    parser.add_argument('-i', '--input', type=str, nargs='+', default=None) 
+    parser.add_argument('-d', '--data', type=str, default='spectrin', 
         choices=['simple','simple2', 'actin2d', 'actin3d', 'spectrin','dual','mt'])
     parser.add_argument('--plain', action='store_true')
     parser.add_argument('--persp', action='store_true')
@@ -36,7 +36,7 @@ if __name__ == "__main__":
             data = [coords_from_csv('data/smlm/cos_clathrin.csv', delimiter='\t')[0],
                     coords_from_csv('data/smlm/cos_mt.csv', delimiter='\t')[0]]
     else:
-        data = [coords_from_csv(args.input,delimiter='\t')[0]]
+        data = [coords_from_csv(f,delimiter='\t')[0] for f in args.input]
         
     cmaps = ('bop blue', 'bop orange', 'magenta')
     v = napari.Viewer()
@@ -44,8 +44,9 @@ if __name__ == "__main__":
 
     for (coords, size, values), cmap in zip(data, cmaps):
         print(f'rendering {human_format(len(coords))} particles... ')
-        
-        layer = Particles(coords, values=values, size=2*size, colormap=cmap,
+        #size = 0.1*size
+        layer = Particles(coords, values=values, size=2*size, 
+            colormap=cmap,
             antialias=args.antialias, 
             filter = ShaderFilter('gaussian'), 
             )

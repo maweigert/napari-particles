@@ -11,11 +11,13 @@ if __name__ == "__main__":
     parser.add_argument('-n', type=int, default=10**4)
     parser.add_argument('--size', type=float, default=.5)
     parser.add_argument('-s','--shader',  type=str, default='gaussian')
+    parser.add_argument('--cmap',  type=str, default='Spectral')
     parser.add_argument('-d','--dim',  type=int, choices=[2,3], default=3)
     parser.add_argument('-v', '--values', type=float, default=None)
     parser.add_argument('-a', '--antialias', type=float, default=0)
     parser.add_argument('--persp', action='store_true')
     parser.add_argument('--vol', action='store_true')
+    parser.add_argument('--points', action='store_true')
 
     args = parser.parse_args() 
 
@@ -23,25 +25,33 @@ if __name__ == "__main__":
 
     coords = np.random.uniform(0,50,(args.n,args.dim))
 
+    coords[:100] = np.random.uniform(24,26,(100,args.dim))
+
     if args.dim==3:
         coords[:,0] *= .1
     
-    size = np.random.uniform(0.2,1,len(coords))
-    size *= args.size*np.prod(coords.max(axis=0)-coords.min(axis=0))**(1/3)/np.mean(size)/len(size)**(1/3)
+    size = .4*np.random.uniform(0.2,1,len(coords))
+    size *= size*np.prod(coords.max(axis=0)-coords.min(axis=0))**(1/3)/np.mean(size)/len(size)**(1/3)
 
     if args.values is None:
-        args.values = np.random.uniform(0.8,1,len(coords))
+        args.values = np.random.uniform(0.1,1,len(coords))
     
-
-    layer = Particles(coords, size=size, 
-        values=args.values,
-        colormap='bop orange',
-        antialias=args.antialias, 
-        filter = ShaderFilter(args.shader) if args.shader !="" else None, 
-    )
 
     v = napari.Viewer()
 
+    if args.points:
+        layer = v.add_points(coords, size=size)
+        v.layers[-1].blending='additive'
+    else:
+        layer = Particles(coords, size=size, 
+        values=args.values,
+        colormap=args.cmap,
+        antialias=args.antialias, 
+        filter = ShaderFilter(args.shader) if args.shader !="" else None, 
+        )
+        layer.add_to_viewer(v)
+
+    
     if args.vol:
         vol = np.einsum('i,jk', np.ones(20), np.random.randint(0,50,(50,50))==0)
         _im = v.add_image(vol)
@@ -49,22 +59,12 @@ if __name__ == "__main__":
 
     layer.contrast_limits=(0,1)
 
-    layer.add_to_viewer(v)
+    
 
     if args.dim==3:
         v.dims.ndisplay=3
 
 
-    visual = layer.get_visual(v)
-
-
-    # v.camera.center=(3.4714992221962504e-06, 0.004604752451216498, 0.01231765490030412)
-    # v.camera.zoom=34.11731650145296
-    # v.camera.angles=(-14.376917598220158, 33.506835538300216, 141.30481201506916)
-    # v.camera.perspective=40.0
-    # layer.blending='additive'
-    # cam = visual.transforms.get_transform('scene', 'document')
-    # cam_inv = visual.transforms.get_transform('document', 'scene')
 
     if args.persp:
         v.camera.perspective=50

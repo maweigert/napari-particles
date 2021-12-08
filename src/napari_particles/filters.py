@@ -37,6 +37,15 @@ class TextureFilter(Filter):
 # ShaderFilters
 
 _shader_functions = {
+    'gaussian_cov': """
+            varying mat2 covariance_inv;
+
+            vec4 func(vec2 x){
+                float val = exp(-2*dot(x,covariance_inv*x));
+                return val*vec4(1,1,1,1);
+            }
+            """,
+
     'gaussian': """
             vec4 func(vec2 x){
                 float r = 2*length(x);
@@ -127,6 +136,8 @@ class ShaderFilter(Filter):
         kwargs.setdefault('fhook', 'post')
 
         fcode = Function("""
+        
+
         void apply() {
             vec4 val = $func(2*(v_texcoord-.5));
 

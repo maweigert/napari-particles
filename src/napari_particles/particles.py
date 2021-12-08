@@ -19,12 +19,20 @@ class BillboardsFilter(Filter):
     """ Billboard geometry filter (transforms vertices to always face camera) 
     """
     def __init__(self, antialias=0):
+        vmat_inv = Function(""" 
+            mat2 inverse(mat2 m) {
+                return mat2(m[1][1],-m[0][1],-m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]);
+            }
+        """)
+
         vfunc = Function("""
 
         varying float v_z_center;
         varying float v_scale_intensity;
+        varying mat2 covariance_inv;
 
         void apply(){
+
             
             // original world coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
             vec4 pos = $transform_inv(gl_Position);
@@ -33,23 +41,28 @@ class BillboardsFilter(Filter):
 
             vec2 tex = $texcoords;
 
-            mat4 scale = mat4(1.0);
-            scale[0][0] = 1;
-            scale[1][1] = 1;
-            scale[2][2] = 1;
+            mat4 cov = mat4(1.0);
+            cov[0][0] = .25;
+            cov[1][1] = .25;
+            cov[2][2] = 1;
             vec4 ex = vec4(1,0,0,0);
             vec4 ey = vec4(0,1,0,0);
+            vec4 ez = vec4(0,0,1,0);
 
+            
             //vec2 ex2 = $camera_inv(scale*$camera(ex)).xy;
             //vec2 ey2 = $camera_inv(scale*$camera(ey)).xy;
 
-            vec2 ex2 = $camera(scale*$camera_inv(ex)).xy;
-            vec2 ey2 = $camera(scale*$camera_inv(ey)).xy;
+            vec3 ex2 = $camera(cov*$camera_inv(ex)).xyz;
+            vec3 ey2 = $camera(cov*$camera_inv(ey)).xyz;
+            vec3 ez2 = $camera(cov*$camera_inv(ez)).xyz;
 
-            mat2 Mscale = mat2(ex2, ey2);
+            mat3 Rmat = mat3(ex2, ey2, ez2);
 
-            //$camera(pos);
+            covariance_inv = mat2(transpose(Rmat)*mat3(cov)*Rmat);
+            covariance_inv = $inverse(covariance_inv);
 
+    
             // get first and second column of view (which is the inverse of the camera) 
             vec3 camera_right = $camera_inv(vec4(1,0,0,0)).xyz;
             vec3 camera_up    = $camera_inv(vec4(0,1,0,0)).xyz;
@@ -85,8 +98,6 @@ class BillboardsFilter(Filter):
                 camera_right = camera_right*scale;
                 camera_up    = camera_up*scale;
                 v_scale_intensity = scale;
-
-
                 
             }
 
@@ -100,7 +111,9 @@ class BillboardsFilter(Filter):
             v_z_center = center.z/center.w;
             
 
-            tex = Mscale*(tex-.5) +.5;
+            //tex = Mscale*(tex-.5) +.5;
+
+            
 
             $v_texcoords = tex;
 
@@ -120,6 +133,7 @@ class BillboardsFilter(Filter):
         """)
 
         self._texcoord_varying = Varying('v_texcoord', 'vec2')
+        vfunc['inverse'] = vmat_inv
         vfunc['v_texcoords'] = self._texcoord_varying
         ffunc['texcoords'] = self._texcoord_varying
         
