@@ -13,7 +13,7 @@ from vispy.visuals.shaders import Function, Varying
 from vispy.gloo import Texture2D, VertexBuffer
 
 from .utils import generate_billboards_2d
-from .filters import ShaderFilter
+from .filters import ShaderFilter, _shader_functions
 
 class BillboardsFilter(Filter):
     """ Billboard geometry filter (transforms vertices to always face camera) 
@@ -31,9 +31,7 @@ class BillboardsFilter(Filter):
         varying float v_scale_intensity;
         varying mat2 covariance_inv;
 
-        void apply(){
-
-            
+        void apply(){            
             // original world coordinates of the (constant) particle squad, e.g. [5,5] for size 5 
             vec4 pos = $transform_inv(gl_Position);
 
@@ -42,23 +40,18 @@ class BillboardsFilter(Filter):
             vec2 tex = $texcoords;
 
             mat4 cov = mat4(1.0);
-            cov[0][0] = .25;
-            cov[1][1] = .25;
-            cov[2][2] = 1;
+            cov[0][0] = sqrt($sigmas[0]);
+            cov[1][1] = sqrt($sigmas[1]);
+            cov[2][2] = sqrt($sigmas[2]);
+
+            // get new inverse covariance matrix (for rotating a gaussian)
             vec4 ex = vec4(1,0,0,0);
             vec4 ey = vec4(0,1,0,0);
             vec4 ez = vec4(0,0,1,0);
-
-            
-            //vec2 ex2 = $camera_inv(scale*$camera(ex)).xy;
-            //vec2 ey2 = $camera_inv(scale*$camera(ey)).xy;
-
             vec3 ex2 = $camera(cov*$camera_inv(ex)).xyz;
             vec3 ey2 = $camera(cov*$camera_inv(ey)).xyz;
             vec3 ez2 = $camera(cov*$camera_inv(ez)).xyz;
-
             mat3 Rmat = mat3(ex2, ey2, ez2);
-
             covariance_inv = mat2(transpose(Rmat)*mat3(cov)*Rmat);
             covariance_inv = $inverse(covariance_inv);
 
@@ -100,24 +93,11 @@ class BillboardsFilter(Filter):
                 v_scale_intensity = scale;
                 
             }
-
             vec3 pos_real  = $vertex_center.xyz + camera_right*pos.x + camera_up*pos.y;
-
-            //pos_real  = $vertex_center.xyz + $camera_inv(vec4(1,0,0,0))*pos.x + $camera_inv(vec4(0,1,0,0))*pos.y;
-
-            gl_Position = $transform(vec4(pos_real, 1.));
-            
+            gl_Position = $transform(vec4(pos_real, 1.));            
             vec4 center = $transform(vec4($vertex_center,1));
             v_z_center = center.z/center.w;
-            
-
-            //tex = Mscale*(tex-.5) +.5;
-
-            
-
             $v_texcoords = tex;
-
-
             }
         """)
 
@@ -146,8 +126,11 @@ class BillboardsFilter(Filter):
         
         self._centercoords_buffer = VertexBuffer(
             np.zeros((0, 3), dtype=np.float32))
+        self._sigmas_buffer = VertexBuffer(
+            np.zeros((0, 3), dtype=np.float32))
 
         vfunc['vertex_center'] = self._centercoords_buffer
+        vfunc['sigmas']        = self._sigmas_buffer
 
         super().__init__(vcode=vfunc, vhook='post',fcode=ffunc, fhook='post')
 
@@ -166,6 +149,20 @@ class BillboardsFilter(Filter):
     def _update_coords_buffer(self, centercoords):
         if self._attached and self._visual is not None:
             self._centercoords_buffer.set_data(centercoords[:,::-1], convert=True)
+
+    @property
+    def sigmas(self):
+        """The vertex center coordinates as an (N, 3) array of floats."""
+        return self._sigmas
+
+    @centercoords.setter
+    def sigmas(self, sigmas):
+        self._sigmas = sigmas
+        self._update_sigmas_buffer(sigmas)
+
+    def _update_sigmas_buffer(self, sigmas):
+        if self._attached and self._visual is not None:
+            self._sigmas_buffer.set_data(sigmas[:,::-1], convert=True)
 
     @property
     def texcoords(self):
@@ -199,34 +196,46 @@ class Particles(Surface):
     """ Billboarded particle layer that renders camera facing quads of given size
         Can be combined with other (e.g. texture) filter to create particle systems etc 
     """
-    def __init__(self, coords, size=10, values=1, filter=ShaderFilter('gaussian'), antialias=False, **kwargs):
+    def __init__(self, coords, size=10, sigmas=(1,1,1), values=1, filter=ShaderFilter('gaussian'), antialias=False, **kwargs):
 
         kwargs.setdefault('shading', 'none')
         kwargs.setdefault('blending', 'additive')
         
         coords = np.asarray(coords)   
+        sigmas = np.asarray(sigmas, dtype=np.float32) 
+
         if np.isscalar(values):
             values = values * np.ones(len(coords))
-        if np.isscalar(size):
-            size = size * np.ones(len(coords))        
 
+        values = np.broadcast_to(values, len(coords))
+        size   = np.broadcast_to(size, len(coords))
+        sigmas = np.broadcast_to(sigmas, (len(coords),3))
+        
         if not coords.ndim == 2 :
             raise ValueError(f'coords should be of shape (M,D)')
+
+        if not len(size)==len(coords)==len(sigmas):
+            raise ValueError()
     
         # add dummy z if 2d coords 
         if coords.shape[1] == 2:
             coords = np.concatenate([np.zeros((len(coords),1)), coords], axis=-1)
 
+        assert coords.shape[-1]==sigmas.shape[-1]==3
+
         vertices, faces, texcoords = generate_billboards_2d(coords, size=size)        
         # repeat values for each 4 vertices
         centercoords = np.repeat(coords, 4, axis=0)
-        values = np.repeat(values, 4, axis=0)
+        sigmas       = np.repeat(sigmas, 4, axis=0)
+        values       = np.repeat(values, 4, axis=0)
         self._coords = coords
         self._centercoords = centercoords
+        self._sigmas  = sigmas
         self._size = size
         self._texcoords = texcoords 
         self._billboard_filter = BillboardsFilter(antialias=antialias)
         self.filter = filter
+        self._viewer = None 
         super().__init__((vertices, faces, values), **kwargs)
 
     def _set_view_slice(self):
@@ -239,6 +248,7 @@ class Particles(Surface):
         if self._billboard_filter._attached and len(faces)>0:
                 self._billboard_filter.texcoords    = self._texcoords[faces]
                 self._billboard_filter.centercoords = self._centercoords[faces][:,-3:]
+                self._billboard_filter.sigmas       = self._sigmas[faces][:,-3:]
 
     @property
     def filter(self):
@@ -270,16 +280,50 @@ class Particles(Surface):
             extrema = np.vstack([mins, maxs])
         return extrema
 
+    @property
+    def shading(self):
+        return str(self._shading)
+
+    @shading.setter
+    def shading(self, shading):
+        self._shading = shading
+        self._detach_filter()
+        self.filter=ShaderFilter(shading)
+        self._attach_filter()
+
+    def _detach_filter(self):
+        for f in self.filter:
+            self._visual.detach(f)
+
+    def _attach_filter(self):
+        for f in self.filter:
+            self._visual.attach(f)
+
     def get_visual(self, viewer):
-        return viewer.window.qt_viewer.layer_to_visual[self].node
+        return viewer.window.qt_viewer.layer_to_visual[self].node        
 
     def add_to_viewer(self, viewer):
-        viewer.add_layer(self)
-        visual = self.get_visual(viewer)
+        self._viewer = viewer 
+        self._viewer.add_layer(self)
+        self._visual = self.get_visual(viewer)
         
-        visual.attach(self._billboard_filter)
+        
+        self._visual.attach(self._billboard_filter)
         self._update_billboard_filter()
+        self._attach_filter()
 
-        for f in self.filter:
-            visual.attach(f)
+        # update combobox 
+        shading_ctrl = self._viewer.window.qt_viewer.controls.widgets[self]
+        combo = shading_ctrl.shadingComboBox
+
+        combo.clear()
+        for k in _shader_functions.keys():
+            combo.addItem(k, k)
+
+
         
+
+
+
+
+

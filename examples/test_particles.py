@@ -15,9 +15,11 @@ if __name__ == "__main__":
     parser.add_argument('-d','--dim',  type=int, choices=[2,3], default=3)
     parser.add_argument('-v', '--values', type=float, default=None)
     parser.add_argument('-a', '--antialias', type=float, default=0)
+    parser.add_argument('--sigma', type=float, nargs=3, default=None)
     parser.add_argument('--persp', action='store_true')
     parser.add_argument('--vol', action='store_true')
     parser.add_argument('--points', action='store_true')
+    parser.add_argument('--sigmas', action='store_true')
 
     args = parser.parse_args() 
 
@@ -35,6 +37,16 @@ if __name__ == "__main__":
 
     if args.values is None:
         args.values = np.random.uniform(0.1,1,len(coords))
+
+    if args.sigmas:
+        sigmas = np.random.uniform(1,2,(len(coords),3))
+        #sigmas = np.ones((len(coords),3))
+        sigmas[:,1:] *= .2
+    elif args.sigma is not None:
+        sigmas  = args.sigma
+
+    else:
+        sigmas = 1
     
 
     v = napari.Viewer()
@@ -42,14 +54,17 @@ if __name__ == "__main__":
     if args.points:
         layer = v.add_points(coords, size=size)
         v.layers[-1].blending='additive'
+        v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
     else:
         layer = Particles(coords, size=size, 
         values=args.values,
         colormap=args.cmap,
         antialias=args.antialias, 
+        sigmas=sigmas, 
         filter = ShaderFilter(args.shader) if args.shader !="" else None, 
         )
         layer.add_to_viewer(v)
+        v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
 
     
     if args.vol:
@@ -64,9 +79,12 @@ if __name__ == "__main__":
     if args.dim==3:
         v.dims.ndisplay=3
 
-
+    
 
     if args.persp:
         v.camera.perspective=50
+
+
+    layer.shading='particle'
 
     napari.run()

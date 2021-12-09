@@ -12,12 +12,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser() 
     parser.add_argument('-i', '--input', type=str, nargs='+', default=None) 
     parser.add_argument('-d', '--data', type=str, default='spectrin', 
-        choices=['simple','simple2', 'actin2d', 'actin3d', 'spectrin','dual','mt'])
+        choices=['simple','simple2', 'actin2d', 'actin3d', 'spectrin','dual','mt', 'ries', 'ries2'])
     parser.add_argument('--plain', action='store_true')
     parser.add_argument('--persp', action='store_true')
     parser.add_argument('-a', '--antialias', type=float, default=0.005)
 
     args = parser.parse_args() 
+    
+    sigma = None 
 
     if args.input is None:
         if args.data=='simple':
@@ -25,7 +27,8 @@ if __name__ == "__main__":
         elif args.data=='simple2':
             data = [coords_random(10**5, size=None, mode='small_z')]
         elif args.data=='spectrin':
-            data = [coords_from_csv('data/smlm/spectrin.csv')[0]]
+            data = [coords_from_csv('data/smlm/spectrin.csv')[:2]]
+            data, sigma = tuple(zip(*data))
         elif args.data=='mt':
             data = [coords_from_smlm('data/smlm/leterrier_mt_simple.smlm')[0]]
         elif args.data=='actin2d':
@@ -33,20 +36,41 @@ if __name__ == "__main__":
         elif args.data=='actin3d':
             data = [coords_from_smlm('data/smlm/leterrier_actin3d.smlm')[0]]
         elif args.data=='dual':
-            data = [coords_from_csv('data/smlm/cos_clathrin.csv', delimiter='\t')[0],
-                    coords_from_csv('data/smlm/cos_mt.csv', delimiter='\t')[0]]
+            data = [coords_from_csv('data/smlm/cos_clathrin.csv', delimiter='\t')[:2],
+                    coords_from_csv('data/smlm/cos_mt.csv', delimiter='\t')[:2]]
+            data, sigma = tuple(zip(*data))
+
+        elif args.data=='ries':
+            data = [coords_from_csv('data/smlm/ries_nup.csv', delimiter=',')[:2]]
+            data, sigma = tuple(zip(*data))
+        elif args.data=='ries2':
+            data = [coords_from_csv('/Users/weigert/Downloads/MT_grouped.csv', delimiter=',')[:2]]
+            data, sigma = tuple(zip(*data))
+
+                    
     else:
         data = [coords_from_csv(f,delimiter='\t')[0] for f in args.input]
         
+    if sigma is None:
+        sigma = [1]* len(data) 
+
     cmaps = ('bop blue', 'bop orange', 'magenta')
     v = napari.Viewer()
 
 
-    for (coords, size, values), cmap in zip(data, cmaps):
+    for (coords, size, values), sigma, cmap in zip(data, sigma, cmaps):
         print(f'rendering {human_format(len(coords))} particles... ')
-        #size = 0.1*size
-        layer = Particles(coords, values=values, size=2*size, 
+        #size = .5*size
+        # values = np.clip(values,0,1)
+        # values= 1
+        # size = size[:4]
+        # coords = coords[:4]
+        sigma = sigma/np.max(sigma, axis=-1, keepdims=True)
+        
+        layer = Particles(coords, values=values, 
+            size=size, 
             colormap=cmap,
+            sigmas = sigma,
             antialias=args.antialias, 
             filter = ShaderFilter('gaussian'), 
             )

@@ -42,26 +42,46 @@ def coords_from_smlm(fname):
 
 def coords_from_csv(fname, delimiter=None):
     df = pd.read_csv(fname, delimiter=delimiter)
-    axis = ['y [nm]','x [nm]']
-    if 'z [nm]' in df.columns:
-        axis = ['z [nm]'] + axis
+
+    # standardize column names
+    df = df.rename(columns={
+        'x [nm]': 'xnm',
+        'y [nm]': 'ynm',
+        'z [nm]': 'znm',
+        'uncertainty_xy [nm]': 'xnmerr',
+        'uncertainty_z [nm]': 'znmerr',
+        'intensity [photon]': 'phot',
+    })
+
+    if not 'ynmerr' in df:
+        df['ynmerr'] = df['xnmerr']
+
+    axis = ['ynm','xnm']
+    if 'znm' in df.columns:
+        axis = ['znm'] + axis
     
     coords = df[axis].to_numpy()
     coords -= coords.mean(axis=0)
     try:
-        size = 4*df['uncertainty_xy [nm]'].to_numpy()
+        size = 4*df['znmerr'].to_numpy()
     except KeyError:
+        print('could not get size')
         size = 10
     try:
-        intens = df['intensity [photon]'].to_numpy()-df['offset [photon]'].to_numpy()
-        intens = intens/np.percentile(intens[::8],90)
+        sigmas = df[['znmerr', 'ynmerr', 'xnmerr']].to_numpy()
+    except KeyError:
+        print('could not get sigmas')
+        sigmas = .25*size
+    
+    try:
+        intens = df['phot'].to_numpy()
     except KeyError:
         intens = 1/size
     
-    intens = intens/np.percentile(intens[::8],90)
+    intens = intens/np.percentile(intens[::8],95)
 
 
-    return (coords, size, intens), df
+    return (coords, size, intens), sigmas, df
 
 
 

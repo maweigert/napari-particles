@@ -58,10 +58,13 @@ if __name__ == "__main__":
     coords = norm_clip(coords)
     
 
-    rad = np.maximum(0,df['r'].to_numpy())
+    rad = np.maximum(0,df['r'].to_numpy()).astype(np.float32)
+
+    
     rad /= np.max(np.abs(np.percentile(rad, (.01,99.99), axis=0)),0, keepdims=True)
 
-    size   = args.size
+
+    size   = args.size#*rad
     values = rad
 
     v = napari.Viewer()

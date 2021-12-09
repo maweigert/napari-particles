@@ -37,7 +37,7 @@ class TextureFilter(Filter):
 # ShaderFilters
 
 _shader_functions = {
-    'gaussian_cov': """
+    'gaussian': """
             varying mat2 covariance_inv;
 
             vec4 func(vec2 x){
@@ -46,17 +46,23 @@ _shader_functions = {
             }
             """,
 
-    'gaussian': """
+    'gaussian2': """
+            varying mat2 covariance_inv;
             vec4 func(vec2 x){
-                float r = 2*length(x);
-                float val = exp(-r*r);
+                float u = dot(x,covariance_inv*x);
+                float y = -2*u;
+
+                float val = (120+y*(120+y*(60+y*(20+y*(5+y)))))*0.0083333333f;
+                val = clamp(val,0.f,1.f);
                 return val*vec4(1,1,1,1);
             }
             """,
+
     'particle': """
             vec4 func(vec2 x){
                 float r = length(x);
                 float val = .05/((max(r,.01)-0.01)+0.05);
+                
                 
                 return val*vec4(1,1,1,1);
             }
@@ -126,6 +132,9 @@ _shader_functions = {
                 if (r<r0){
                     val = max(val,r*r/r0/r0);
                 }
+                else{
+                    discard;
+                }
                 return val*vec4(1,1,1,1);
             }
             """
@@ -139,6 +148,7 @@ class ShaderFilter(Filter):
         
 
         void apply() {
+            // normalize texcoords to (-1,1)
             vec4 val = $func(2*(v_texcoord-.5));
 
             // if particle is far away, ramp up intensity

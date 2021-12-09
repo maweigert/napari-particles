@@ -23,12 +23,13 @@ import napari
 from napari_particles.particles import Particles
 from napari_particles.filters import ShaderFilter
 
-coords = np.random.randint(0,100,(1000,3))
-size   = np.random.uniform(3, 9, len(coords))
+coords = np.random.uniform(0,100,(10000,3))
+coords[:,0] *=.1
+size   = np.random.uniform(.4, 1, len(coords))
 values = np.random.uniform(0.2,1, len(coords))
 
-layer = Particles(coords, 
-                size=size, 
+layer = Particles(coords,
+                size=size,
                 values=values,
                 colormap='Spectral',
                 filter = ShaderFilter('gaussian'))
@@ -37,8 +38,9 @@ layer.contrast_limits=(0,1)
 v = napari.Viewer()
 layer.add_to_viewer(v)
 v.dims.ndisplay=3
-
+v.camera.perspective=80.0
 napari.run()
+
 ```
 
 ## Examples Scripts
