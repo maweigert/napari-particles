@@ -4,6 +4,7 @@ A particle layer for napari (super rough draft)
 
 ----------------------------------
 
+![Demo](images/particles.gif)
 
 ## Installation
 
@@ -43,7 +44,8 @@ napari.run()
 
 ```
 
-<img width="683" alt="im2" src="https://user-images.githubusercontent.com/11042162/144323947-1636abc1-27b2-431d-a5f5-1e67b72b2071.png">
+
+
 
 
 ## Examples Scripts
