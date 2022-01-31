@@ -137,7 +137,23 @@ _shader_functions = {
                 }
                 return val*vec4(1,1,1,1);
             }
+            """,
+    'fractal': """
+            vec4 func(vec2 x){
+                vec2 c = vec2(-.4,.6);
+                const float r = 2;
+                const int n = 100;
+                int res=0;
+                for (int i=0;i<n;i++){
+                    res += int(length(x)<r);
+                    x = vec2(x.x*x.x-x.y*x.y,2*x.x*x.y);
+                    x = x+c;
+                }
+                float val= float(res)/n;
+                return val*vec4(1,1,1,1);
+            }
             """
+
 }
 
 class ShaderFilter(Filter):

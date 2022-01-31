@@ -9,7 +9,7 @@ from napari_particles.filters import ShaderFilter, TextureFilter
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', type=int, default=10**4)
-    parser.add_argument('--size', type=float, default=.5)
+    parser.add_argument('--size', type=float, default=None)
     parser.add_argument('-s','--shader',  type=str, default='gaussian')
     parser.add_argument('--cmap',  type=str, default='Spectral')
     parser.add_argument('-d','--dim',  type=int, choices=[2,3], default=3)
@@ -32,8 +32,11 @@ if __name__ == "__main__":
     if args.dim==3:
         coords[:,0] *= .1
     
-    size = .4*np.random.uniform(0.2,1,len(coords))
-    size *= size*np.prod(coords.max(axis=0)-coords.min(axis=0))**(1/3)/np.mean(size)/len(size)**(1/3)
+    if args.size is None:
+        size = .4*np.random.uniform(0.2,1,len(coords))
+        size *= size*np.prod(coords.max(axis=0)-coords.min(axis=0))**(1/3)/np.mean(size)/len(size)**(1/3)
+    else:
+        size = args.size
 
     if args.values is None:
         args.values = np.random.uniform(0.1,1,len(coords))
@@ -64,6 +67,7 @@ if __name__ == "__main__":
         filter = ShaderFilter(args.shader) if args.shader !="" else None, 
         )
         layer.add_to_viewer(v)
+        
         v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
 
     
@@ -85,6 +89,6 @@ if __name__ == "__main__":
         v.camera.perspective=50
 
 
-    layer.shading='particle'
+    
 
     napari.run()
