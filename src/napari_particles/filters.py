@@ -171,15 +171,13 @@ class ShaderFilter(Filter):
             float infinity_raise = $distance_intensity_increase*length(fwidth(v_texcoord));
             
             //gl_FragColor *= val*(1+infinity_raise);
-            
-            //gl_FragColor *= val / sqrt(max(1, v_scale_intensity));
-            //gl_FragColor *= val;
-            
+                        
             //val.w *= (exp(-.5*max(v_scale_intensity-1,0))+.05)/1.05;
             
-            gl_FragColor *= val/sqrt(max(1, v_scale_intensity));
+            //gl_FragColor *= val/sqrt(max(1, v_scale_intensity));
 
-            //gl_FragColor *= val;
+            gl_FragColor *= val;
+
 
 
             

@@ -27,7 +27,6 @@ if __name__ == "__main__":
 
     coords = np.random.uniform(0,50,(args.n,args.dim))
 
-    coords[:100] = np.random.uniform(24,26,(100,args.dim))
 
     if args.dim==3:
         coords[:,0] *= .1

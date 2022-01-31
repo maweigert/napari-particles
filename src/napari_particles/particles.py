@@ -87,7 +87,6 @@ class BillboardsFilter(Filter):
                 float scale = dist_cutoff/dist;
                 //tex = .5+(tex-.5)*clamp(scale,1,10);
                 
-                tex = .5+(tex-.5);
                 camera_right = camera_right*scale;
                 camera_up    = camera_up*scale;
                 v_scale_intensity = scale;
@@ -107,7 +106,6 @@ class BillboardsFilter(Filter):
         
         void apply() {   
             gl_FragDepth = v_z_center;
-
             $texcoords;
         }
         """)
@@ -223,7 +221,9 @@ class Particles(Surface):
 
         assert coords.shape[-1]==sigmas.shape[-1]==3
 
-        vertices, faces, texcoords = generate_billboards_2d(coords, size=size)        
+        vertices, faces, texcoords = generate_billboards_2d(coords, size=size)    
+
+
         # repeat values for each 4 vertices
         centercoords = np.repeat(coords, 4, axis=0)
         sigmas       = np.repeat(sigmas, 4, axis=0)

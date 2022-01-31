@@ -36,7 +36,7 @@ def generate_billboards_2d(coords: np.ndarray, size: Union[float, np.ndarray] =2
     
     texcoords = np.tile(texcoords0,(n,1))
     
-    faces = np.tile(np.array([[0,1,2],[0,2,3]]),(n,1))
+    faces = np.tile(np.array([[0,1,2],[0,3,2]]),(n,1))
     faces = faces+np.repeat(np.repeat(4*np.arange(n)[:,np.newaxis],3,axis=-1),2 ,axis=0)
     return verts, faces, texcoords
 
