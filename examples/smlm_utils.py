@@ -52,7 +52,7 @@ def coords_from_csv(fname, delimiter=None):
         'uncertainty_z [nm]': 'znmerr',
         'intensity [photon]': 'phot',
     })
-
+    
     if not 'ynmerr' in df:
         df['ynmerr'] = df['xnmerr']
 

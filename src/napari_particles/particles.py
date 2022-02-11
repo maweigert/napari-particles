@@ -85,7 +85,7 @@ class BillboardsFilter(Filter):
             if (($antialias>0) && (dist<dist_cutoff)) {
                 
                 float scale = dist_cutoff/dist;
-                //tex = .5+(tex-.5)*clamp(scale,1,10);
+                tex = .5+(tex-.5)*clamp(scale,1,10);
                 
                 camera_right = camera_right*scale;
                 camera_up    = camera_up*scale;

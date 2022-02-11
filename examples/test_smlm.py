@@ -49,7 +49,18 @@ if __name__ == "__main__":
 
                     
     else:
-        data = [coords_from_csv(f,delimiter='\t')[0] for f in args.input]
+        for f in args.input:
+            data = []
+            for delim in ('\t', ',', ' '):
+                try:
+                    d = coords_from_csv(f,delimiter=delim)[0]
+                    data.append(d)
+                    break
+                except Exception as e:
+                    print(e)
+            if len(data)==0:
+                raise ValueError(f"could not open {f}")
+            
         
     if sigma is None:
         sigma = [1]* len(data) 
@@ -66,6 +77,7 @@ if __name__ == "__main__":
         # size = size[:4]
         # coords = coords[:4]
         sigma = sigma/np.max(sigma, axis=-1, keepdims=True)
+        
         
         layer = Particles(coords, values=values, 
             size=size, 

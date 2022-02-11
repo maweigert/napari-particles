@@ -44,9 +44,6 @@ if __name__ == "__main__":
         sigmas = np.random.uniform(1,2,(len(coords),3))
         #sigmas = np.ones((len(coords),3))
         sigmas[:,1:] *= .2
-    elif args.sigma is not None:
-        sigmas  = args.sigma
-
     else:
         sigmas = 1
     
