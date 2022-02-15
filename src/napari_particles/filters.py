@@ -42,6 +42,7 @@ _shader_functions = {
 
             vec4 func(vec2 x){
                 float val = exp(-2*dot(x,covariance_inv*x));
+                //val = 0*val+x.x;
                 return val*vec4(1,1,1,1);
             }
             """,

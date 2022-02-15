@@ -41,8 +41,7 @@ if __name__ == "__main__":
         args.values = np.random.uniform(0.1,1,len(coords))
 
     if args.sigmas:
-        sigmas = np.random.uniform(1,2,(len(coords),3))
-        #sigmas = np.ones((len(coords),3))
+        sigmas = np.ones((len(coords),3))
         sigmas[:,1:] *= .2
     else:
         sigmas = 1
@@ -74,17 +73,10 @@ if __name__ == "__main__":
 
     layer.contrast_limits=(0,1)
 
-    
-
     if args.dim==3:
         v.dims.ndisplay=3
 
-    
-
     if args.persp:
         v.camera.perspective=50
-
-
-    
 
     napari.run()

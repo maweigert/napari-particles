@@ -40,6 +40,7 @@ class BillboardsFilter(Filter):
             vec2 tex = $texcoords;
 
             mat4 cov = mat4(1.0);
+            
             cov[0][0] = sqrt($sigmas[0]);
             cov[1][1] = sqrt($sigmas[1]);
             cov[2][2] = sqrt($sigmas[2]);
@@ -96,7 +97,13 @@ class BillboardsFilter(Filter):
             gl_Position = $transform(vec4(pos_real, 1.));            
             vec4 center = $transform(vec4($vertex_center,1));
             v_z_center = center.z/center.w;
-            $v_texcoords = tex;
+
+
+            // flip tex coords neccessary since 0.4.13 and vispy bump
+            // TODO: investigate  
+            
+            $v_texcoords = vec2(tex.y, tex.x);
+
             }
         """)
 
@@ -129,7 +136,7 @@ class BillboardsFilter(Filter):
 
         vfunc['vertex_center'] = self._centercoords_buffer
         vfunc['sigmas']        = self._sigmas_buffer
-
+        
         super().__init__(vcode=vfunc, vhook='post',fcode=ffunc, fhook='post')
 
         
@@ -187,6 +194,8 @@ class BillboardsFilter(Filter):
         self.vshader['camera_inv'] = visual.transforms.get_transform('document', 'scene')
         # inverse of it
         self.vshader['camera'] = visual.transforms.get_transform('scene', 'document')
+
+        
         super()._attach(visual)
         
 
