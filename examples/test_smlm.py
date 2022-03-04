@@ -18,8 +18,9 @@ if __name__ == "__main__":
     parser.add_argument('-a', '--antialias', type=float, default=0.005)
 
     args = parser.parse_args() 
-    
+
     sigma = None 
+
 
     if args.input is None:
         if args.data=='simple':
@@ -49,8 +50,8 @@ if __name__ == "__main__":
 
                     
     else:
+        data = []
         for f in args.input:
-            data = []
             for delim in ('\t', ',', ' '):
                 try:
                     d = coords_from_csv(f,delimiter=delim)[0]
@@ -61,7 +62,7 @@ if __name__ == "__main__":
             if len(data)==0:
                 raise ValueError(f"could not open {f}")
             
-        
+    
     if sigma is None:
         sigma = [1]* len(data) 
 
@@ -88,6 +89,7 @@ if __name__ == "__main__":
             )
 
         layer.contrast_limits=(0,1)
+        print('adding')
         layer.add_to_viewer(v)
         
     if args.persp:
