@@ -1,25 +1,27 @@
 """
 """
 
-import numpy as np 
+import numpy as np
 from abc import ABC
 from vispy.visuals.filters import Filter
 from vispy.visuals.shaders import Function, Varying
 from vispy.gloo import Texture2D, VertexBuffer
 
-# TODO: Add mipmapping 
+# TODO: Add mipmapping
 class TextureFilter(Filter):
     def __init__(self, texture, **kwargs):
-        kwargs.setdefault('fhook', 'post')
+        kwargs.setdefault("fhook", "post")
 
-        self._fcode = Function("""
+        self._fcode = Function(
+            """
         void apply() {
             gl_FragColor *= texture2D($u_texture, v_texcoord);
         }
-        """)
+        """
+        )
         texture = np.asarray(texture).astype(np.float32)
-        if not texture.ndim==3:
-            raise ValueError('texure needs to be array of size (M,N,1)')
+        if not texture.ndim == 3:
+            raise ValueError("texure needs to be array of size (M,N,1)")
         self.texture = texture
         super().__init__(fcode=self._fcode, **kwargs)
 
@@ -31,23 +33,23 @@ class TextureFilter(Filter):
     @texture.setter
     def texture(self, texture):
         self._texture = texture
-        self._fcode['u_texture'] = Texture2D(texture)
+        self._fcode["u_texture"] = Texture2D(texture)
 
 
 # ShaderFilters
 
 _shader_functions = {
-    'gaussian': """
+    "gaussian": """
             varying mat2 covariance_inv;
 
             vec4 func(vec2 x){
-                float val = exp(-2*dot(x,covariance_inv*x));
+                float r = dot(x,covariance_inv*x);
+                float val = exp(-2*r);
                 //val = 0*val+x.x;
                 return val*vec4(1,1,1,1);
             }
             """,
-
-    'gaussian2': """
+    "gaussian2": """
             varying mat2 covariance_inv;
             vec4 func(vec2 x){
                 float u = dot(x,covariance_inv*x);
@@ -58,28 +60,27 @@ _shader_functions = {
                 return val*vec4(1,1,1,1);
             }
             """,
-
-    'particle': """
+    "particle": """
+            varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-                float r = length(x);
+                float r = dot(x,covariance_inv*x);
                 float val = .05/((max(r,.01)-0.01)+0.05);
                 
                 
                 return val*vec4(1,1,1,1);
             }
             """,
-
-    'airy': """
+    "airy": """
             vec4 func(vec2 x){
                 float r = 8*length(x);
                 float val = abs(sin(r)/(1e-8+r));
                 return val*vec4(1,1,1,1);
             }
             """,
-
-    'fresnel': """
+    "fresnel": """
+            varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-                float r = length(x);
+                dot(x,covariance_inv*x)
                 float d = .7;
                 float val = 1.;
                 if (r>d){
@@ -90,11 +91,10 @@ _shader_functions = {
                 return val*vec4(1,1,1,1);
             }
             """,
-    
-    'sphere': """        
+    "sphere": """     
+            varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-
-                float r = length(x);
+                float r = dot(x,covariance_inv*x);
                 float r0 = .8;
                 float val= 0;
                 if (r<r0)
@@ -104,15 +104,15 @@ _shader_functions = {
                 return vec4(val,val,val,1);
             }
             """,
-    'none': """
+    "none": """
             vec4 func(vec2 x){
                 return vec4(1,1,1,1);
             }
             """,
-
-    'bubble': """
+    "bubble": """
+            varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-                float r = length(x);
+                float r = dot(x,covariance_inv*x);
                 float r1 = .8;
                 float r2 = .9;
                 float val = 0;
@@ -125,9 +125,10 @@ _shader_functions = {
                 return val*vec4(1,1,1,1);
             }
             """,
-    'bubble2': """
+    "bubble2": """
+            varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-                float r = length(x);
+                float r = dot(x,covariance_inv*x);
                 float r0 = .9;
                 float val = exp(-400*(r-r0)*(r-r0));
                 if (r<r0){
@@ -139,7 +140,7 @@ _shader_functions = {
                 return val*vec4(1,1,1,1);
             }
             """,
-    'fractal': """
+    "fractal": """
             vec4 func(vec2 x){
                 vec2 c = vec2(-.4,.6);
                 const float r = 2;
@@ -153,15 +154,16 @@ _shader_functions = {
                 float val= float(res)/n;
                 return val*vec4(1,1,1,1);
             }
-            """
-
+            """,
 }
 
-class ShaderFilter(Filter):
-    def __init__(self, mode='gaussian', distance_intensity_increase=1, **kwargs):        
-        kwargs.setdefault('fhook', 'post')
 
-        fcode = Function("""
+class ShaderFilter(Filter):
+    def __init__(self, mode="gaussian", distance_intensity_increase=1, **kwargs):
+        kwargs.setdefault("fhook", "post")
+
+        fcode = Function(
+            """
         
 
         void apply() {
@@ -182,12 +184,13 @@ class ShaderFilter(Filter):
 
 
             
-        }""")
+        }"""
+        )
 
-        if mode in _shader_functions: 
-            fcode['func']=Function(_shader_functions[mode])
-            fcode['distance_intensity_increase'] = 10*distance_intensity_increase
+        if mode in _shader_functions:
+            fcode["func"] = Function(_shader_functions[mode])
+            fcode["distance_intensity_increase"] = 10 * distance_intensity_increase
         else:
-            fcode=mode
+            fcode = mode
 
         super().__init__(fcode=fcode, **kwargs)
