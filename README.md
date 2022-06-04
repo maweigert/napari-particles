@@ -4,7 +4,7 @@ A particle layer for napari (super rough draft)
 
 ----------------------------------
 
-![Demo](images/particles.gif)
+![Demo](images/particles_small.gif)
 
 ## Installation
 
