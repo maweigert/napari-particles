@@ -46,26 +46,31 @@ if __name__ == "__main__":
 
     if args.sigmas:
         sigmas = np.ones((len(coords), 3))
-        sigmas[:, 1:] *= 0.4
+        sigmas[:, :-1] *= 0.2
     else:
         sigmas = 1
 
-    v = napari.Viewer()
+    rotvec = np.random.normal(0, 1, (len(coords), 3))
 
     if args.points:
         layer = v.add_points(coords, size=size)
         v.layers[-1].blending = "additive"
         v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
     else:
+
         layer = Particles(
             coords,
             size=size,
             values=args.values,
+            rotvec=rotvec,
             colormap=args.cmap,
             antialias=args.antialias,
             sigmas=sigmas,
             filter=ShaderFilter(args.shader) if args.shader != "" else None,
         )
+
+        v = napari.Viewer()
+
         layer.add_to_viewer(v)
 
         v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
