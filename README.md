@@ -1,6 +1,6 @@
 # napari-particles (WIP)
 
-A particle layer for napari (super rough draft)
+A particle layer for napari
 
 ----------------------------------
 
