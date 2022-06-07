@@ -80,8 +80,8 @@ _shader_functions = {
     "fresnel": """
             varying mat2 covariance_inv;   
             vec4 func(vec2 x){
-                dot(x,covariance_inv*x)
-                float d = .7;
+                float r = dot(x,covariance_inv*x);
+                float d = 0.7;
                 float val = 1.;
                 if (r>d){
                     val = exp(-4*(r-d));

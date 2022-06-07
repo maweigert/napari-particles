@@ -9,7 +9,7 @@ from napari_particles.filters import ShaderFilter, TextureFilter
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-n", type=int, default=3*10**4)
+    parser.add_argument("-n", type=int, default=5*10**4)
     parser.add_argument("--size", type=float, default=None)
     parser.add_argument("-s", "--shader", type=str, default="sphere")
 
