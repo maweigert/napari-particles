@@ -3,9 +3,6 @@
 
 #include "Vec3.h"
 
-// Simple point data type to insert into the tree.
-// Have something with more interesting behavior inherit
-// from this in order to store other attributes in the tree.
 class OctreePoint {
 	Vec3 position; 
 public:
