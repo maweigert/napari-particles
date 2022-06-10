@@ -22,7 +22,7 @@ public:
     {
         setPosition(pos);
     };
-    Particle(const int id, const std::vector<Particle *> parts)
+    Particle(const int id, const std::vector<Particle> &parts)
     {
         float size = 0;
         float value = 0;
@@ -30,9 +30,9 @@ public:
 
         for (auto &p : parts)
         {
-            size += p->size;
-            value += p->value;
-            pos += p->getPosition();
+            size += p.size;
+            value += p.value;
+            pos += p.getPosition();
         }
         value = value / parts.size();
         pos = pos / parts.size();
@@ -100,7 +100,7 @@ public:
             if (verbose)
                 std::cout << pos.x << " " << pos.y << std::endl;
 
-            tree->insert(&particles.back());
+            tree->insert(i, pos);
         }
 
         // add intermediates
@@ -125,16 +125,17 @@ public:
             }
 
             // insert itself
-            std::vector<Particle *> parts;
+            std::vector<Particle> parts;
             for (int i = 0; i < 8; ++i)
             {
-                if ((root->children[i] != NULL) && (root->children[i]->data != NULL))
-                    parts.push_back(reinterpret_cast<Particle *>(root->children[i]->data));
+                Octree * child = root->children[i];
+                if ((child != NULL) && (child->id >=0))
+                    parts.push_back(particles[child->id]);
             }
 
             Particle p(particles.size(), parts);
             particles.push_back(p);
-            root->data = &particles.back();
+            root->id = particles.size();
             if (verbose)
                 std::cout << "new intermediate: " << p.id << std::endl;
         }
@@ -154,27 +155,62 @@ public:
         }
     }
 
+
+    void add_visible(Octree *root, std::vector<int>& visible, float distance, bool verbose){
+
+        if (verbose)
+            std::cout<<"visible "<<root->origin.x<<" "<<root->origin.y<<" "<<root->origin.z<<std::endl; 
+        
+
+        bool criterion = distance>root->position.z;
+
+
+        if ((criterion) || (root->isLeafNode())){
+            visible.push_back(root->id);
+        }
+        else{
+            for (int i = 0; i < 8; ++i){
+                Octree * child = root->children[i];
+                if ((child != NULL) && (child->id >=0))
+                    add_visible(child, visible, distance, verbose);
+            }
+        }
+    }
+
+    py::array_t<int> getVisible(float distance, bool verbose=false)
+    {
+
+        std::vector<int> idx; 
+
+        add_visible(tree, idx, distance, verbose);
+
+        return py::array_t<int>(idx.size(),         // shape
+                                  (int *)idx.data() // the data pointer
+        );
+
+    }
+
+
     py::array_t<float> getPos()
     {
-        return py::array_t<float>(p_pos.size(), // shape
-                                (float*)p_pos.data()          // the data pointer
+        return py::array_t<float>(particles.size()*3,         // shape
+                                  (float *)p_pos.data() // the data pointer
         );
     }
 
     py::array_t<float> getSize()
     {
-        return py::array_t<float>(p_sizes.size(), // shape
-                                (float*)p_sizes.data()          // the data pointer
+        return py::array_t<float>(p_sizes.size(),         // shape
+                                  (float *)p_sizes.data() // the data pointer
         );
     }
 
     py::array_t<float> getValue()
     {
-        return py::array_t<float>(p_values.size(), // shape
-                                (float*)p_values.data()          // the data pointer
+        return py::array_t<float>(p_values.size(),         // shape
+                                  (float *)p_values.data() // the data pointer
         );
     }
-
 };
 
 PYBIND11_MODULE(paroctree, m)
@@ -197,8 +233,8 @@ PYBIND11_MODULE(paroctree, m)
              {
                  return "Particle Cloud with " + std::to_string(a.particles.size()) + " particles";
              })
-        .def("getPos", &ParticleCloud::getPos, "")
-        .def("getValue", &ParticleCloud::getValue, "")
-        .def("getSize", &ParticleCloud::getSize, "")
-        ;
+        .def("get_positions", &ParticleCloud::getPos, "")
+        .def("get_values", &ParticleCloud::getValue, "")
+        .def("get_sizes", &ParticleCloud::getSize, "")
+        .def("visible", &ParticleCloud::getVisible, "", py::arg("depth"), py::arg("verbose") = false);
 }
