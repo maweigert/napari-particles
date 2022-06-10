@@ -18,6 +18,7 @@ class Octree {
     // a point, though in many applications only, the leaves will store data.
     Octree *children[8]; //! Pointers to child octants
     int id;   //! the id of the node
+    const int max_items;
     Vec3 position;
     /*
             Children follow a predictable pattern to make accesses simple.
@@ -29,15 +30,15 @@ class Octree {
         */
 
     public:
-    Octree(const Vec3& origin, const Vec3& halfDimension) 
-        : origin(origin), halfDimension(halfDimension), id(-1), position(Vec3(0,0,0)) {
+    Octree(const Vec3& origin, const Vec3& halfDimension, const int max_items=1) 
+        : origin(origin), halfDimension(halfDimension), id(-1), position(Vec3(0,0,0)), max_items(max_items) {
             // Initially, there are no children
             for(int i=0; i<8; ++i) 
                 children[i] = NULL;
         }
 
     Octree(const Octree& copy)
-        : origin(copy.origin), halfDimension(copy.halfDimension), id(copy.id), position(copy.position) {
+        : origin(copy.origin), halfDimension(copy.halfDimension), id(copy.id), position(copy.position), max_items(copy.max_items) {
 
         }
 
@@ -100,7 +101,7 @@ class Octree {
                     newOrigin.x += halfDimension.x * (i&4 ? .5f : -.5f);
                     newOrigin.y += halfDimension.y * (i&2 ? .5f : -.5f);
                     newOrigin.z += halfDimension.z * (i&1 ? .5f : -.5f);
-                    children[i] = new Octree(newOrigin, halfDimension*.5f);
+                    children[i] = new Octree(newOrigin, halfDimension*.5f, max_items);
                 }
 
                 // Re-insert the old point, and insert this new point

@@ -54,9 +54,9 @@ public:
     std::vector<float> p_sizes;
 
 public:
-    ParticleCloud(const Vec3 &origin, const Vec3 &halfDimension)
+    ParticleCloud(const Vec3 &origin, const Vec3 &halfDimension, const int max_items)
     {
-        tree = new Octree(origin, halfDimension);
+        tree = new Octree(origin, halfDimension, max_items);
     };
     ~ParticleCloud()
     {
@@ -225,13 +225,13 @@ PYBIND11_MODULE(paroctree, m)
         .def(py::init<const Vec3 &, const Vec3 &>());
 
     py::class_<ParticleCloud>(m, "ParticleCloud")
-        .def(py::init<const Vec3 &, const Vec3 &>())
+        .def(py::init<const Vec3 &, const Vec3 &, const int>())
         .def("foo", &ParticleCloud::foo, "")
         .def("init", &ParticleCloud::init, "", py::arg("coords"), py::arg("verbose") = false)
         .def("__repr__",
              [](const ParticleCloud &a)
              {
-                 return "Particle Cloud with " + std::to_string(a.particles.size()) + " particles";
+                 return "Particle Cloud with " + std::to_string(a.particles.size()) + " particles ( max " + std::to_string(a.tree->max_items) + " items)";
              })
         .def("get_positions", &ParticleCloud::getPos, "")
         .def("get_values", &ParticleCloud::getValue, "")
