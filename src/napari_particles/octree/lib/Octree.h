@@ -17,9 +17,9 @@ class Octree {
     // The tree has up to eight children and can additionally store
     // a point, though in many applications only, the leaves will store data.
     Octree *children[8]; //! Pointers to child octants
-    int id;   //! the id of the node
+    std::vector<int> idx;   //! the id of the node
+    std::vector<Vec3> positions;
     const int max_items;
-    Vec3 position;
     /*
             Children follow a predictable pattern to make accesses simple.
             Here, - means less than 'origin' in that dimension, + means greater than.
@@ -31,14 +31,14 @@ class Octree {
 
     public:
     Octree(const Vec3& origin, const Vec3& halfDimension, const int max_items=1) 
-        : origin(origin), halfDimension(halfDimension), id(-1), position(Vec3(0,0,0)), max_items(max_items) {
+        : origin(origin), halfDimension(halfDimension), max_items(max_items) {
             // Initially, there are no children
             for(int i=0; i<8; ++i) 
                 children[i] = NULL;
         }
 
     Octree(const Octree& copy)
-        : origin(copy.origin), halfDimension(copy.halfDimension), id(copy.id), position(copy.position), max_items(copy.max_items) {
+        : origin(copy.origin), halfDimension(copy.halfDimension), idx(copy.idx), positions(copy.positions), max_items(copy.max_items) {
 
         }
 
@@ -76,22 +76,24 @@ class Octree {
         // and it is a leaf, then we're done!
         
         if(isLeafNode()) {
-            if(this->id==-1) {
-                this->id = id;
-                this->position = point;
+            if(this->idx.size()<max_items) {
+                this->idx.push_back(id);
+                this->positions.push_back(point);
                 return;
             } else {
 
 
-                // We're at a leaf, but there's already something here
+                // We're at a leaf and we are full
                 // We will split this node so that it has 8 child octants
                 // and then insert the old data that was here, along with 
                 // this new data point
 
                 // Save this data point that was here for a later re-insert
-                int  oldID = this->id;
-                Vec3 oldPoint = this->position;
-                this->id = -1;
+                std::vector<int>  oldIDs = this->idx;
+                std::vector<Vec3> oldPoints = this->positions;
+
+                this->idx.clear();
+                this->positions.clear();
 
                 // Split the current node and create new empty trees for each
                 // child octant.
@@ -107,8 +109,12 @@ class Octree {
                 // Re-insert the old point, and insert this new point
                 // (We wouldn't need to insert from the root, because we already
                 // know it's guaranteed to be in this section of the tree)
-                children[getOctantContainingPoint(oldPoint)]->insert(oldID, oldPoint);
+                for (size_t i = 0; i < oldIDs.size(); i++)
+                {
+                    children[getOctantContainingPoint(oldPoints[i])]->insert(oldIDs[i], oldPoints[i]);        
+                }
                 children[getOctantContainingPoint(point)]->insert(id, point);
+                
             }
         } else {
             // We are at an interior node. Insert recursively into the 

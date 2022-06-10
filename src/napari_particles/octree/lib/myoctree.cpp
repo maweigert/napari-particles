@@ -126,18 +126,20 @@ public:
 
             // insert itself
             std::vector<Particle> parts;
+    
             for (int i = 0; i < 8; ++i)
             {
                 Octree * child = root->children[i];
-                if ((child != NULL) && (child->id >=0))
-                    parts.push_back(particles[child->id]);
+                if ((child != NULL) && (!child->idx.empty()))
+                    for (auto id : child->idx)
+                        parts.push_back(particles[id]);
             }
 
             Particle p(particles.size(), parts);
             particles.push_back(p);
-            root->id = particles.size();
+            root->idx.push_back(particles.size());
             if (verbose)
-                std::cout << "new intermediate: " << p.id << std::endl;
+                std::cout << "new intermediate: " << p.id << " "<<  root->idx[0] <<  std::endl;
         }
     };
 
@@ -162,16 +164,17 @@ public:
             std::cout<<"visible "<<root->origin.x<<" "<<root->origin.y<<" "<<root->origin.z<<std::endl; 
         
 
-        bool criterion = distance>root->position.z;
+        bool criterion = distance>root->positions[0].z;
 
 
         if ((criterion) || (root->isLeafNode())){
-            visible.push_back(root->id);
+            for (auto id : root->idx)
+                visible.push_back(id);
         }
         else{
             for (int i = 0; i < 8; ++i){
                 Octree * child = root->children[i];
-                if ((child != NULL) && (child->id >=0))
+                if ((child != NULL) && (!child->idx.empty()))
                     add_visible(child, visible, distance, verbose);
             }
         }
