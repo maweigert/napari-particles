@@ -10,6 +10,8 @@ from collections.abc import Iterable
 from napari.layers import Surface
 from napari.layers.utils.layer_utils import calc_data_range
 
+import paroctree
+
 from .utils import generate_billboards_2d
 from .billboards_filter import BillboardsFilter
 from .filters import ShaderFilter, _shader_functions
@@ -80,29 +82,32 @@ class Particles(Surface):
 
         assert coords.shape[-1] == sigmas.shape[-1] == 3
 
-        vertices, faces, texcoords = generate_billboards_2d(coords, size=size)
 
-        # repeat values for each 4 vertices
-        centercoords = np.repeat(coords, 4, axis=0)
-        sigmas = np.repeat(sigmas, 4, axis=0)
-        rotvec = np.repeat(rotvec, 4, axis=0)
-        values = np.repeat(values, 4, axis=0)
-        self._coords = coords
-        self._centercoords = centercoords
-        self._sigmas = sigmas
-        self.rotvec = rotvec
-        # self._orient = orient
-        self._size = size
-        self._texcoords = texcoords
-        self._billboard_filter = BillboardsFilter(antialias=antialias)
-        self.filter = filter
-        self._viewer = None
-        super().__init__((vertices, faces, values), **kwargs)
+        self.pointcloud = paroctree.Particle
+
+        # vertices, faces, texcoords = generate_billboards_2d(coords, size=size)
+        # # repeat values for each 4 vertices
+        # centercoords = np.repeat(coords, 4, axis=0)
+        # sigmas = np.repeat(sigmas, 4, axis=0)
+        # rotvec = np.repeat(rotvec, 4, axis=0)
+        # values = np.repeat(values, 4, axis=0)
+        # self._coords = coords
+        # self._centercoords = centercoords
+        # self._sigmas = sigmas
+        # self.rotvec = rotvec
+        # # self._orient = orient
+        # self._size = size
+        # self._texcoords = texcoords
+        # self._billboard_filter = BillboardsFilter(antialias=antialias)
+        # self.filter = filter
+        # self._viewer = None
+        # super().__init__((vertices, faces, values), **kwargs)
+
 
     def _set_view_slice(self):
         """Sets the view given the indices to slice with."""
         super()._set_view_slice()
-        self._update_billboard_filter()
+        # self._update_billboard_filter()
 
     def _update_billboard_filter(self):
         faces = self._view_faces.flatten()
@@ -195,9 +200,9 @@ class Particles(Surface):
         self._viewer.add_layer(self)
         self._visual = self.get_visual(viewer)
 
-        self._visual.attach(self._billboard_filter)
-        self._update_billboard_filter()
-        self._attach_filter()
+        # self._visual.attach(self._billboard_filter)
+        # self._update_billboard_filter()
+        # self._attach_filter()
 
         # update combobox
         shading_ctrl = self._viewer.window.qt_viewer.controls.widgets[self]

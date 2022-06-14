@@ -50,6 +50,7 @@ if __name__ == "__main__":
     else:
         sigmas = 1
 
+    
     rotvec = np.random.normal(0, 1, (len(coords), 3))
 
     if args.points:
@@ -58,6 +59,7 @@ if __name__ == "__main__":
         v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
     else:
 
+        print('create Particle layer')
         layer = Particles(
             coords,
             size=size,
@@ -69,11 +71,11 @@ if __name__ == "__main__":
             filter=ShaderFilter(args.shader) if args.shader != "" else None,
         )
 
-        v = napari.Viewer()
+        # v = napari.Viewer()
 
-        layer.add_to_viewer(v)
+        # layer.add_to_viewer(v)
 
-        v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
+        # v.window.qt_viewer.layer_to_visual[layer].node.canvas.measure_fps()
 
     if args.vol:
         vol = np.einsum("i,jk", np.ones(20), np.random.randint(0, 50, (50, 50)) == 0)

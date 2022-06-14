@@ -57,6 +57,13 @@ class Octree {
         return oct;
     }
 
+    // Determine whether point is in current njode
+    bool isInside(const Vec3& point) const {
+        return ((point.x >= origin.x-halfDimension.x) && (point.x < origin.x+halfDimension.x) &&
+        (point.y >= origin.y-halfDimension.y) && (point.y < origin.y+halfDimension.y) &&
+        (point.z >= origin.z-halfDimension.z) && (point.z < origin.z+halfDimension.z));
+    }
+
     bool isLeafNode() const {
         // This is correct, but overkill. See below.
         /*

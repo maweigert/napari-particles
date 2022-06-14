@@ -36,6 +36,7 @@ public:
         }
         value = value / parts.size();
         pos = pos / parts.size();
+        size = size/ sqrt(parts.size());
 
         this->id = id;
         this->value = value;
@@ -158,14 +159,14 @@ public:
     }
 
 
-    void add_visible(Octree *root, std::vector<int>& visible, float distance, bool verbose){
+    void add_visible(Octree *root, std::vector<int>& visible, Vec3 &point, bool verbose){
 
         if (verbose)
             std::cout<<"visible "<<root->origin.x<<" "<<root->origin.y<<" "<<root->origin.z<<std::endl; 
         
 
-        bool criterion = distance>root->positions[0].z;
-
+        // bool criterion = (root->origin-point).norm()>10;
+        bool criterion = !root->isInside(point);
 
         if ((criterion) || (root->isLeafNode())){
             for (auto id : root->idx)
@@ -175,20 +176,22 @@ public:
             for (int i = 0; i < 8; ++i){
                 Octree * child = root->children[i];
                 if ((child != NULL) && (!child->idx.empty()))
-                    add_visible(child, visible, distance, verbose);
+                    add_visible(child, visible, point, verbose);
             }
         }
     }
 
-    py::array_t<int> getVisible(float distance, bool verbose=false)
+    py::array_t<int> getVisible(std::tuple<float,float, float> point, bool verbose=false)
     {
 
         std::vector<int> idx; 
 
-        add_visible(tree, idx, distance, verbose);
+        Vec3 point_vec = Vec3(std::get<0>(point),std::get<1>(point),std::get<2>(point));
+
+        add_visible(tree, idx, point_vec, verbose);
 
         return py::array_t<int>(idx.size(),         // shape
-                                  (int *)idx.data() // the data pointer
+                                (int *)idx.data() // the data pointer
         );
 
     }
@@ -239,5 +242,5 @@ PYBIND11_MODULE(paroctree, m)
         .def("get_positions", &ParticleCloud::getPos, "")
         .def("get_values", &ParticleCloud::getValue, "")
         .def("get_sizes", &ParticleCloud::getSize, "")
-        .def("visible", &ParticleCloud::getVisible, "", py::arg("depth"), py::arg("verbose") = false);
+        .def("visible", &ParticleCloud::getVisible, "", py::arg("point"), py::arg("verbose") = false);
 }
