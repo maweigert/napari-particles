@@ -1,4 +1,5 @@
 import numpy as np
+from vispy.visuals.filters import Filter
 from vispy.visuals.shaders import Function, Varying
 from vispy.gloo import VertexBuffer
 
