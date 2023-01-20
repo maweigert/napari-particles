@@ -9,7 +9,7 @@ from abc import ABC
 from collections.abc import Iterable
 from napari.layers import Surface
 from napari.layers.utils.layer_utils import calc_data_range
-
+import warnings
 from .utils import generate_billboards_2d
 from .billboards_filter import BillboardsFilter
 from .filters import ShaderFilter, _shader_functions
@@ -188,7 +188,10 @@ class Particles(Surface):
             self._visual.attach(f)
 
     def get_visual(self, viewer):
-        return viewer.window.qt_viewer.layer_to_visual[self].node
+        # FIXME: access to qt_viewer will be removed in napari 0.5.0 
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            return viewer.window.qt_viewer.layer_to_visual[self].node
 
     def add_to_viewer(self, viewer,**kwargs):
         self._viewer = viewer
@@ -200,11 +203,14 @@ class Particles(Surface):
         self._attach_filter()
 
         # update combobox
-        shading_ctrl = self._viewer.window.qt_viewer.controls.widgets[self]
-        combo = shading_ctrl.shadingComboBox
-
-        
-
-        combo.clear()
-        for k in _shader_functions.keys():
-            combo.addItem(k, k)
+        try: 
+            # FIXME: access to qt_viewer will be removed in napari 0.5.0 
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                shading_ctrl = self._viewer.window.qt_viewer.controls.widgets[self]
+                combo = shading_ctrl.shadingComboBox
+                combo.clear()
+                for k in _shader_functions.keys():
+                    combo.addItem(k, k)
+        except:
+            print('cannot populate combo box')
