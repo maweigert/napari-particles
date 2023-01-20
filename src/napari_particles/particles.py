@@ -190,9 +190,9 @@ class Particles(Surface):
     def get_visual(self, viewer):
         return viewer.window.qt_viewer.layer_to_visual[self].node
 
-    def add_to_viewer(self, viewer):
+    def add_to_viewer(self, viewer,**kwargs):
         self._viewer = viewer
-        self._viewer.add_layer(self)
+        self._viewer.add_layer(self, **kwargs)
         self._visual = self.get_visual(viewer)
 
         self._visual.attach(self._billboard_filter)
