@@ -82,6 +82,7 @@ class Particles(Surface):
 
         vertices, faces, texcoords = generate_billboards_2d(coords, size=size)
 
+        
         # repeat values for each 4 vertices
         centercoords = np.repeat(coords, 4, axis=0)
         sigmas = np.repeat(sigmas, 4, axis=0)
@@ -93,7 +94,7 @@ class Particles(Surface):
         self.rotvec = rotvec
         # self._orient = orient
         self._size = size
-        self._texcoords = texcoords
+        self._mytexcoords = texcoords
         self._billboard_filter = BillboardsFilter(antialias=antialias)
         self.filter = filter
         self._viewer = None
@@ -106,8 +107,9 @@ class Particles(Surface):
 
     def _update_billboard_filter(self):
         faces = self._view_faces.flatten()
+        
         if self._billboard_filter._attached and len(faces) > 0:
-            self._billboard_filter.texcoords = self._texcoords[faces]
+            self._billboard_filter.texcoords = self._mytexcoords[faces]
             self._billboard_filter.centercoords = self._centercoords[faces][:, -3:]
             self._billboard_filter.sigmas = self._sigmas[faces][:, -3:]
             self._billboard_filter.quatvec = self._quatvec[faces][:, -3:]
@@ -155,11 +157,14 @@ class Particles(Surface):
 
     @property
     def shading(self):
-        return str(self._shading)
+        if self._shading is None:
+            return None
+        else:
+            return str(self._shading)
 
     @shading.setter
     def shading(self, shading):
-        self._shading = shading
+        self._shading = None
         self._detach_filter()
         self.filter = ShaderFilter(shading)
         self._attach_filter()
